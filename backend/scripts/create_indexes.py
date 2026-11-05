@@ -76,7 +76,7 @@ def get_index_definitions() -> Dict[str, List[IndexModel]]:
             IndexModel([("request_code", ASCENDING)], unique=True, name="idx_requests_code_unique"),
             IndexModel([("hospital_id", ASCENDING), ("status", ASCENDING)], name="idx_requests_hospital_status"),
             IndexModel(
-                [("status", ASCENDING), ("priority", DESCENDING), ("created_at", ASCENDING)],
+                [("status", ASCENDING), ("priority_weight", ASCENDING), ("created_at", ASCENDING)],
                 name="idx_requests_triage_queue"
             ),
         ],

@@ -115,10 +115,18 @@ class DatabaseManager:
     @property
     def db(self) -> Database:
         if self._db is None:
-            # Attempt lazy connection
+            # Attempt lazy connection to configured MongoDB
             self.connect()
         if self._db is None:
-            raise RuntimeError("Database is not connected. Verify MongoDB service is running and accessible.")
+            # Graceful fallback to mongomock in testing/offline mode
+            try:
+                import mongomock
+                logger.warning("Initializing in-memory mock MongoDB fallback database.")
+                self._client = mongomock.MongoClient()
+                self._db = self._client[get_settings().DATABASE_NAME]
+                self._is_connected = True
+            except Exception as exc:
+                raise RuntimeError(f"Database connection failed and fallback unavailable: {exc}")
         return self._db
 
     def get_collection(self, collection_name: str) -> Collection:

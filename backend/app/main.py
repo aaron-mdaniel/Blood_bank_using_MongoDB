@@ -29,18 +29,22 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     logger.info(f"Starting {settings.PROJECT_NAME} in '{settings.ENVIRONMENT}' mode...")
 
-    # Connect to MongoDB
-    connected = db_manager.connect()
-    if connected:
-        logger.info("MongoDB connection verified successfully.")
+    # Connect to MongoDB if not already initialized
+    if not db_manager.is_connected:
+        connected = db_manager.connect()
+        if connected:
+            logger.info("MongoDB connection verified successfully.")
+        else:
+            logger.warning("MongoDB is currently offline or unreachable. Check database configuration.")
     else:
-        logger.warning("MongoDB is currently offline or unreachable. Check database configuration.")
+        logger.info("MongoDB connection already active (e.g. test fixture or injected client).")
 
     yield
 
     # Teardown
-    logger.info("Shutting down application and closing database connections...")
-    db_manager.disconnect()
+    if settings.ENVIRONMENT != "testing":
+        logger.info("Shutting down application and closing database connections...")
+        db_manager.disconnect()
 
 
 def create_application() -> FastAPI:
@@ -108,6 +112,26 @@ def create_application() -> FastAPI:
                 "diagnostics": db_status,
             }
         )
+
+    # Register Domain CRUD Routers
+    from app.routers import (
+        user_router,
+        donor_router,
+        hospital_router,
+        patient_router,
+        donation_router,
+        blood_unit_router,
+        blood_request_router,
+    )
+
+    api_prefix = settings.API_V1_PREFIX
+    app.include_router(user_router, prefix=api_prefix)
+    app.include_router(donor_router, prefix=api_prefix)
+    app.include_router(hospital_router, prefix=api_prefix)
+    app.include_router(patient_router, prefix=api_prefix)
+    app.include_router(donation_router, prefix=api_prefix)
+    app.include_router(blood_unit_router, prefix=api_prefix)
+    app.include_router(blood_request_router, prefix=api_prefix)
 
     return app
 
