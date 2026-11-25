@@ -19,11 +19,23 @@ from app.schemas.blood_request_schema import (
     BloodRequestUpdate,
     BloodRequestResponse,
 )
+from app.schemas.auth_schema import (
+    LoginRequest,
+    RegisterRequest,
+    TokenResponse,
+    UserSummary,
+    LogoutResponse,
+)
 
 __all__ = [
     "MongoBaseModel",
     "PyObjectId",
     "PaginatedResponse",
+    "LoginRequest",
+    "RegisterRequest",
+    "TokenResponse",
+    "UserSummary",
+    "LogoutResponse",
     "UserCreate",
     "UserUpdate",
     "UserResponse",

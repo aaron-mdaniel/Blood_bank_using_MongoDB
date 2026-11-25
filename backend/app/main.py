@@ -113,8 +113,9 @@ def create_application() -> FastAPI:
             }
         )
 
-    # Register Domain CRUD Routers
+    # Register Domain CRUD & Authentication Routers
     from app.routers import (
+        auth_router,
         user_router,
         donor_router,
         hospital_router,
@@ -125,6 +126,7 @@ def create_application() -> FastAPI:
     )
 
     api_prefix = settings.API_V1_PREFIX
+    app.include_router(auth_router, prefix=api_prefix)
     app.include_router(user_router, prefix=api_prefix)
     app.include_router(donor_router, prefix=api_prefix)
     app.include_router(hospital_router, prefix=api_prefix)

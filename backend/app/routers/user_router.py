@@ -1,12 +1,14 @@
 """
 User CRUD REST API Router.
 """
+import hashlib
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query, status
 from pymongo.errors import DuplicateKeyError
 
 from app.repositories.user_repository import UserRepository
 from app.schemas.user_schema import UserCreate, UserUpdate, UserResponse
+from app.security.hashing import hash_password
 
 router = APIRouter(prefix="/users", tags=["Users"])
 user_repo = UserRepository()
@@ -14,7 +16,7 @@ user_repo = UserRepository()
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(payload: UserCreate):
-    """Creates a new system user."""
+    """Creates a new system user with Argon2id password hashing."""
     # Check for existing username
     if user_repo.get_by_username(payload.username):
         raise HTTPException(
@@ -22,10 +24,18 @@ async def create_user(payload: UserCreate):
             detail=f"Username '{payload.username}' is already registered."
         )
 
-    # In Phase 2, store with mock password hash (Argon2id integration occurs in Phase 3)
+    email_hash = hashlib.sha256(payload.email.strip().lower().encode("utf-8")).hexdigest()
+    if user_repo.get_by_email_hash(email_hash):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email address is already registered."
+        )
+
     user_dict = payload.model_dump()
     raw_password = user_dict.pop("password")
-    user_dict["password_hash"] = f"hashed_{raw_password}"
+    user_dict["password_hash"] = hash_password(raw_password)
+    user_dict["email_hash"] = email_hash
+    user_dict["email_encrypted"] = f"enc_{payload.email}"
     user_dict["is_active"] = True
     user_dict["failed_login_attempts"] = 0
     user_dict["lockout_until"] = None
