@@ -26,6 +26,7 @@ from app.schemas.auth_schema import (
     UserSummary,
     LogoutResponse,
 )
+from app.schemas.role_schema import RolePermissionUpdate, RolePermissionResponse
 
 __all__ = [
     "MongoBaseModel",
@@ -36,6 +37,8 @@ __all__ = [
     "TokenResponse",
     "UserSummary",
     "LogoutResponse",
+    "RolePermissionUpdate",
+    "RolePermissionResponse",
     "UserCreate",
     "UserUpdate",
     "UserResponse",

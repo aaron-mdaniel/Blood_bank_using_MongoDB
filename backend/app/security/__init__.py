@@ -11,7 +11,10 @@ from app.security.dependencies import (
     oauth2_scheme,
     get_current_user,
     get_current_token_and_payload,
+    require_roles,
+    require_permissions,
 )
+from app.security import abac
 
 __all__ = [
     "hash_password",
@@ -23,4 +26,7 @@ __all__ = [
     "oauth2_scheme",
     "get_current_user",
     "get_current_token_and_payload",
+    "require_roles",
+    "require_permissions",
+    "abac",
 ]

@@ -39,6 +39,11 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("MongoDB connection already active (e.g. test fixture or injected client).")
 
+    # Ensure canonical RBAC role definitions exist in MongoDB when connected
+    if db_manager.is_connected:
+        from app.services.rbac_service import RBACService
+        RBACService().ensure_seeded()
+
     yield
 
     # Teardown
@@ -117,6 +122,7 @@ def create_application() -> FastAPI:
     from app.routers import (
         auth_router,
         user_router,
+        role_router,
         donor_router,
         hospital_router,
         patient_router,
@@ -128,6 +134,7 @@ def create_application() -> FastAPI:
     api_prefix = settings.API_V1_PREFIX
     app.include_router(auth_router, prefix=api_prefix)
     app.include_router(user_router, prefix=api_prefix)
+    app.include_router(role_router, prefix=api_prefix)
     app.include_router(donor_router, prefix=api_prefix)
     app.include_router(hospital_router, prefix=api_prefix)
     app.include_router(patient_router, prefix=api_prefix)

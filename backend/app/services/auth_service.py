@@ -37,8 +37,15 @@ class AuthService:
     def register_user(self, payload: RegisterRequest) -> Dict[str, Any]:
         """
         Registers a new user account with Argon2id password hashing.
-        Rejects duplicate usernames and email addresses.
+        Rejects duplicate usernames/email addresses and prevents public ADMIN self-registration.
         """
+        requested_role = payload.role.value if isinstance(payload.role, UserRole) else str(payload.role)
+        if requested_role == UserRole.ADMIN.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Self-registration with ADMIN role is not permitted. Contact an administrator.",
+            )
+
         # Check duplicate username
         if self.user_repo.get_by_username(payload.username):
             raise HTTPException(

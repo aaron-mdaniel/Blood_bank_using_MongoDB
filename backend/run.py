@@ -18,8 +18,10 @@ if __name__ == "__main__":
     print(f"Launching {settings.PROJECT_NAME} on http://127.0.0.1:8000...")
     uvicorn.run(
         "app.main:app",
+        app_dir=str(BACKEND_DIR),
         host="127.0.0.1",
         port=8000,
         reload=settings.DEBUG,
+        reload_dirs=[str(BACKEND_DIR)],
         log_level="info",
     )

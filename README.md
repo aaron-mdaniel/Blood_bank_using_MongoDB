@@ -22,12 +22,24 @@ secure-blood-bank/
 │   │   ├── config/
 │   │   │   ├── settings.py         # Pydantic BaseSettings environment config
 │   │   │   └── database.py         # MongoDB connection manager & collection handles
+│   │   ├── models/                 # Domain enums & RBAC permission definitions
+│   │   ├── repositories/           # PyMongo data access layer (CRUD & atomic updates)
+│   │   ├── routers/                # FastAPI REST routers (Auth, Roles, Domain APIs)
+│   │   ├── schemas/                # Pydantic v2 request/response schemas
+│   │   ├── security/               # Argon2id hashing, JWT, RBAC & ABAC policies
+│   │   ├── services/               # AuthService, RBACService business logic
 │   │   └── main.py                 # FastAPI application factory & health endpoints
 │   ├── scripts/
-│   │   └── create_indexes.py       # MongoDB compound, unique, 2dsphere & TTL index script
+│   │   ├── create_indexes.py       # MongoDB compound, unique, 2dsphere & TTL index script
+│   │   └── seed_roles.py           # Seeds default 5 RBAC roles in roles_permissions
 │   ├── tests/
-│   │   ├── conftest.py             # Pytest fixtures & isolated in-memory DB
-│   │   └── test_database.py        # Phase 1 verification tests
+│   │   ├── conftest.py             # Pytest fixtures, mock DB & role auth header factory
+│   │   ├── test_database.py        # Phase 1 verification tests
+│   │   ├── test_crud_repositories.py # Phase 2 repository unit tests
+│   │   ├── test_crud_api.py        # Phase 2 CRUD API tests
+│   │   ├── test_auth.py            # Phase 3 authentication tests
+│   │   ├── test_rbac.py            # Phase 4 RBAC authorization tests
+│   │   └── test_abac.py            # Phase 5 resource-level ABAC tests
 │   ├── .env.example                # Configuration template
 │   ├── .env                        # Local configuration
 │   ├── requirements.txt            # Python dependencies
@@ -69,9 +81,10 @@ cp backend/.env.example backend/.env
 ```
 Ensure `MONGODB_URL` points to your active MongoDB instance (e.g. `mongodb://localhost:27017` or MongoDB Atlas URI).
 
-### 3. Initialize MongoDB Indexes
+### 3. Initialize MongoDB Indexes & Seed RBAC Roles
 ```bash
 python backend/scripts/create_indexes.py
+python backend/scripts/seed_roles.py
 ```
 
 ### 4. Run the Development Server

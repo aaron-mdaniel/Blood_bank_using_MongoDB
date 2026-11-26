@@ -1,13 +1,15 @@
 """
-User CRUD REST API Router.
+User CRUD REST API Router (Admin-protected via RBAC).
 """
 import hashlib
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query, status
+from typing import Any, Dict, List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pymongo.errors import DuplicateKeyError
 
+from app.models.permissions import Permission
 from app.repositories.user_repository import UserRepository
 from app.schemas.user_schema import UserCreate, UserUpdate, UserResponse
+from app.security.dependencies import require_permissions
 from app.security.hashing import hash_password
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -15,8 +17,11 @@ user_repo = UserRepository()
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(payload: UserCreate):
-    """Creates a new system user with Argon2id password hashing."""
+async def create_user(
+    payload: UserCreate,
+    current_user: Dict[str, Any] = Depends(require_permissions(Permission.USERS_WRITE)),
+):
+    """Creates a new system user with Argon2id password hashing (Admin only)."""
     # Check for existing username
     if user_repo.get_by_username(payload.username):
         raise HTTPException(
@@ -54,9 +59,10 @@ async def create_user(payload: UserCreate):
 async def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    role: Optional[str] = None
+    role: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(require_permissions(Permission.USERS_READ)),
 ):
-    """Retrieves paginated list of users."""
+    """Retrieves paginated list of users (Admin only)."""
     query = {}
     if role:
         query["role"] = role
@@ -64,8 +70,11 @@ async def list_users(
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user(user_id: str):
-    """Retrieves a single user by ID."""
+async def get_user(
+    user_id: str,
+    current_user: Dict[str, Any] = Depends(require_permissions(Permission.USERS_READ)),
+):
+    """Retrieves a single user by ID (Admin only)."""
     user = user_repo.get_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
@@ -73,8 +82,12 @@ async def get_user(user_id: str):
 
 
 @router.put("/{user_id}", response_model=UserResponse)
-async def update_user(user_id: str, payload: UserUpdate):
-    """Updates user role or active status."""
+async def update_user(
+    user_id: str,
+    payload: UserUpdate,
+    current_user: Dict[str, Any] = Depends(require_permissions(Permission.USERS_WRITE)),
+):
+    """Updates user role or active status (Admin only)."""
     update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields provided to update.")
@@ -86,8 +99,11 @@ async def update_user(user_id: str, payload: UserUpdate):
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: str):
-    """Deletes a user account."""
+async def delete_user(
+    user_id: str,
+    current_user: Dict[str, Any] = Depends(require_permissions(Permission.USERS_DELETE)),
+):
+    """Deletes a user account (Admin only)."""
     deleted = user_repo.delete(user_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")

@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi.testclient import TestClient
 
 
-def test_user_api_crud(client: TestClient):
+def test_user_api_crud(client: TestClient, admin_headers):
     """Test POST, GET, PUT, and duplicate rejection on /api/users."""
     # 1. Create User
     user_payload = {
@@ -15,7 +15,7 @@ def test_user_api_crud(client: TestClient):
         "password": "SecurePassword123!",
         "role": "DONOR",
     }
-    create_res = client.post("/api/users", json=user_payload)
+    create_res = client.post("/api/users", json=user_payload, headers=admin_headers)
     assert create_res.status_code == 201
     user_data = create_res.json()
     assert user_data["username"] == "john_donor"
@@ -24,26 +24,26 @@ def test_user_api_crud(client: TestClient):
     user_id = user_data.get("_id") or user_data.get("id")
 
     # 2. Duplicate Username Rejection
-    dup_res = client.post("/api/users", json=user_payload)
+    dup_res = client.post("/api/users", json=user_payload, headers=admin_headers)
     assert dup_res.status_code == 409
 
     # 3. List Users
-    list_res = client.get("/api/users")
+    list_res = client.get("/api/users", headers=admin_headers)
     assert list_res.status_code == 200
     assert len(list_res.json()) >= 1
 
     # 4. Get User by ID
-    get_res = client.get(f"/api/users/{user_id}")
+    get_res = client.get(f"/api/users/{user_id}", headers=admin_headers)
     assert get_res.status_code == 200
     assert get_res.json()["username"] == "john_donor"
 
     # 5. Update User Status
-    update_res = client.put(f"/api/users/{user_id}", json={"is_active": False})
+    update_res = client.put(f"/api/users/{user_id}", json={"is_active": False}, headers=admin_headers)
     assert update_res.status_code == 200
     assert update_res.json()["is_active"] is False
 
 
-def test_donor_api_crud(client: TestClient):
+def test_donor_api_crud(client: TestClient, admin_headers):
     """Test POST and GET on /api/donors."""
     donor_payload = {
         "user_id": "usr_test_1",
@@ -59,19 +59,19 @@ def test_donor_api_crud(client: TestClient):
         "emergency_contact": "+91-9876543211",
         "eligibility_status": "ELIGIBLE",
     }
-    create_res = client.post("/api/donors", json=donor_payload)
+    create_res = client.post("/api/donors", json=donor_payload, headers=admin_headers)
     assert create_res.status_code == 201
     donor_data = create_res.json()
     assert donor_data["donor_card_number"] == "CARD-BLR-001"
     donor_id = donor_data.get("_id") or donor_data.get("id")
 
     # Filter donors by blood group
-    filter_res = client.get("/api/donors?blood_group=B&rh_factor=POSITIVE")
+    filter_res = client.get("/api/donors?blood_group=B&rh_factor=POSITIVE", headers=admin_headers)
     assert filter_res.status_code == 200
     assert len(filter_res.json()) == 1
 
 
-def test_hospital_api_crud(client: TestClient):
+def test_hospital_api_crud(client: TestClient, admin_headers):
     """Test POST and GET on /api/hospitals."""
     hosp_payload = {
         "name": "Manipal Central Hospital",
@@ -81,18 +81,18 @@ def test_hospital_api_crud(client: TestClient):
         "emergency_helpline": "+91-80-22223333",
         "verification_status": "VERIFIED",
     }
-    create_res = client.post("/api/hospitals", json=hosp_payload)
+    create_res = client.post("/api/hospitals", json=hosp_payload, headers=admin_headers)
     assert create_res.status_code == 201
     hosp_data = create_res.json()
     assert hosp_data["license_number"] == "LIC-HOSP-2026-01"
 
     # List hospitals
-    list_res = client.get("/api/hospitals")
+    list_res = client.get("/api/hospitals", headers=admin_headers)
     assert list_res.status_code == 200
     assert len(list_res.json()) >= 1
 
 
-def test_patient_api_crud(client: TestClient):
+def test_patient_api_crud(client: TestClient, admin_headers):
     """Test POST and GET on /api/patients."""
     patient_payload = {
         "hospital_id": "hosp_manipal",
@@ -104,18 +104,18 @@ def test_patient_api_crud(client: TestClient):
         "clinical_indication": "Major orthopedic reconstruction",
         "medical_notes": "Allergic to penicillin",
     }
-    create_res = client.post("/api/patients", json=patient_payload)
+    create_res = client.post("/api/patients", json=patient_payload, headers=admin_headers)
     assert create_res.status_code == 201
     patient_data = create_res.json()
     assert patient_data["mrn"] == "MRN-2026-9001"
 
     # Query by hospital
-    list_res = client.get("/api/patients?hospital_id=hosp_manipal")
+    list_res = client.get("/api/patients?hospital_id=hosp_manipal", headers=admin_headers)
     assert list_res.status_code == 200
     assert len(list_res.json()) == 1
 
 
-def test_donation_api_crud(client: TestClient):
+def test_donation_api_crud(client: TestClient, admin_headers):
     """Test POST and GET on /api/donations."""
     donation_payload = {
         "donation_code": "DON-API-2026-001",
@@ -127,14 +127,14 @@ def test_donation_api_crud(client: TestClient):
         "blood_pressure": "118/78",
         "screening_status": "PASSED",
     }
-    create_res = client.post("/api/donations", json=donation_payload)
+    create_res = client.post("/api/donations", json=donation_payload, headers=admin_headers)
     assert create_res.status_code == 201
     donation_data = create_res.json()
     assert donation_data["donation_code"] == "DON-API-2026-001"
     assert donation_data["screening_status"] == "PASSED"
 
 
-def test_blood_unit_api_crud(client: TestClient):
+def test_blood_unit_api_crud(client: TestClient, admin_headers):
     """Test POST, GET and filter on /api/blood-units."""
     expiry_dt = (datetime.now(timezone.utc) + timedelta(days=42)).isoformat()
     unit_payload = {
@@ -149,18 +149,21 @@ def test_blood_unit_api_crud(client: TestClient):
         "storage_location": {"refrigerator_id": "REF-B2", "shelf": "S1", "slot": "SLOT-08"},
         "status": "AVAILABLE",
     }
-    create_res = client.post("/api/blood-units", json=unit_payload)
+    create_res = client.post("/api/blood-units", json=unit_payload, headers=admin_headers)
     assert create_res.status_code == 201
     unit_data = create_res.json()
     assert unit_data["unit_id"] == "UNIT-A-POS-901"
 
     # Filter units by blood_group and status
-    filter_res = client.get("/api/blood-units?blood_group=A&rh_factor=POSITIVE&status=AVAILABLE")
+    filter_res = client.get(
+        "/api/blood-units?blood_group=A&rh_factor=POSITIVE&status=AVAILABLE",
+        headers=admin_headers,
+    )
     assert filter_res.status_code == 200
     assert len(filter_res.json()) == 1
 
 
-def test_blood_request_api_crud(client: TestClient):
+def test_blood_request_api_crud(client: TestClient, admin_headers):
     """Test POST and GET on /api/blood-requests."""
     req_payload = {
         "request_code": "REQ-API-9901",
@@ -174,7 +177,7 @@ def test_blood_request_api_crud(client: TestClient):
         "priority": "CRITICAL",
         "clinical_reason": "Severe acute trauma hemorrhage",
     }
-    create_res = client.post("/api/blood-requests", json=req_payload)
+    create_res = client.post("/api/blood-requests", json=req_payload, headers=admin_headers)
     assert create_res.status_code == 201
     req_data = create_res.json()
     assert req_data["request_code"] == "REQ-API-9901"
@@ -182,12 +185,12 @@ def test_blood_request_api_crud(client: TestClient):
     assert req_data["status"] == "PENDING"
 
     # List requests with priority filter
-    list_res = client.get("/api/blood-requests?priority=CRITICAL")
+    list_res = client.get("/api/blood-requests?priority=CRITICAL", headers=admin_headers)
     assert list_res.status_code == 200
     assert len(list_res.json()) >= 1
 
 
-def test_input_validation_error(client: TestClient):
+def test_input_validation_error(client: TestClient, admin_headers):
     """Test that invalid enum inputs yield HTTP 422 Unprocessable Entity."""
     invalid_unit = {
         "unit_id": "UNIT-INVALID",
@@ -200,5 +203,5 @@ def test_input_validation_error(client: TestClient):
         "expiry_date": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
         "storage_location": {"refrigerator_id": "REF-1", "shelf": "S1"},
     }
-    res = client.post("/api/blood-units", json=invalid_unit)
+    res = client.post("/api/blood-units", json=invalid_unit, headers=admin_headers)
     assert res.status_code == 422
