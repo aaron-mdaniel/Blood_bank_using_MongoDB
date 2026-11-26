@@ -1,0 +1,84 @@
+{
+  "info": {
+    "name": "Secure Centralized Blood Bank Management System",
+    "description": "End-to-end Postman collection covering Auth, RBAC, ABAC, Encryption, Workflows, Aggregations, Blood Camps, and Audit Logs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8000" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Health Check",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/health/db" }
+    },
+    {
+      "name": "2. Login (Admin Demo)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "if (json.access_token) { pm.collectionVariables.set('token', json.access_token); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"admin_demo\",\n  \"password\": \"AdminDemo2026!\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/login"
+      }
+    },
+    {
+      "name": "3. Analytics Dashboard (Aggregations)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/analytics/dashboard"
+      }
+    },
+    {
+      "name": "4. Triage Queue",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/blood-requests/triage"
+      }
+    },
+    {
+      "name": "5. Nearby Blood Camps (2dsphere)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/blood-camps/nearby?longitude=77.5946&latitude=12.9716&radius_km=25"
+      }
+    },
+    {
+      "name": "6. Scan Expiry & Low Stock Alerts",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"expiry_days_threshold\": 7,\n  \"min_units_threshold\": 2\n}" },
+        "url": "{{baseUrl}}/api/notifications/scan-alerts"
+      }
+    },
+    {
+      "name": "7. Security Audit Logs (Admin)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/audit?limit=50"
+      }
+    }
+  ]
+}

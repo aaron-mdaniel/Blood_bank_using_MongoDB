@@ -10,6 +10,9 @@ from app.repositories.patient_repository import PatientRepository
 from app.repositories.donation_repository import DonationRepository
 from app.repositories.blood_unit_repository import BloodUnitRepository
 from app.repositories.blood_request_repository import BloodRequestRepository
+from app.repositories.audit_repository import AuditRepository
+from app.repositories.notification_repository import NotificationRepository
+from app.repositories.blood_camp_repository import BloodCampRepository
 
 __all__ = [
     "BaseRepository",
@@ -21,4 +24,7 @@ __all__ = [
     "DonationRepository",
     "BloodUnitRepository",
     "BloodRequestRepository",
+    "AuditRepository",
+    "NotificationRepository",
+    "BloodCampRepository",
 ]

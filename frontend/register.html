@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register | Secure Blood Bank</title>
+  <link rel="stylesheet" href="/ui/css/styles.css" />
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <div class="brand-header">
+      <div class="brand-drop">B+</div>
+      <div>
+        <div class="brand-title">Create Account</div>
+        <div class="brand-subtitle">Protected by Argon2id &amp; AES-256-GCM</div>
+      </div>
+    </div>
+
+    <div id="auth-alert" class="hidden"></div>
+
+    <form id="register-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input id="username" name="username" minlength="3" required placeholder="e.g. dr_sharma" />
+      </div>
+      <div class="form-group">
+        <label for="email">Email (stored encrypted)</label>
+        <input id="email" name="email" type="email" required placeholder="name@hospital.org" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password (min 8 chars)</label>
+        <input id="password" name="password" type="password" minlength="8" required placeholder="Minimum 8 characters" />
+      </div>
+      <div class="form-group">
+        <label for="role">Role</label>
+        <select id="role" name="role">
+          <option value="DONOR">Donor</option>
+          <option value="HOSPITAL_STAFF">Hospital Staff</option>
+          <option value="DOCTOR">Doctor</option>
+          <option value="BLOOD_BANK_STAFF">Blood Bank Staff</option>
+        </select>
+      </div>
+      <div id="hospital-scope-wrap" class="form-group hidden">
+        <label for="hospital_id">Hospital ID</label>
+        <input id="hospital_id" name="hospital_id" placeholder="e.g. hosp_01" />
+      </div>
+      <div id="bloodbank-scope-wrap" class="form-group hidden">
+        <label for="blood_bank_id">Blood Bank ID</label>
+        <input id="blood_bank_id" name="blood_bank_id" placeholder="e.g. bb_central" />
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:6px;">
+        Create Account
+      </button>
+    </form>
+
+    <div class="mt-4" style="font-size:13px;">
+      Already registered? <a href="/ui/login.html" style="color:var(--primary);font-weight:600;text-decoration:none;">Sign In</a>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initRegisterPage } from "/ui/js/auth.js";
+    initRegisterPage();
+  </script>
+</body>
+</html>

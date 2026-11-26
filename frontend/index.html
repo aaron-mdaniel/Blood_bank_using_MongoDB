@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Secure Centralized Blood Bank System</title>
+  <link rel="stylesheet" href="/ui/css/styles.css" />
+</head>
+<body class="auth-page">
+  <div class="auth-card" style="text-align:center;">
+    <div class="brand-header" style="justify-content:center;">
+      <div class="brand-drop">B+</div>
+      <div style="text-align:left;">
+        <div class="brand-title">Secure Blood Bank</div>
+        <div class="brand-subtitle">Centralized NoSQL Platform</div>
+      </div>
+    </div>
+    <p class="text-muted">Checking active session...</p>
+  </div>
+  <script type="module">
+    import { getStoredUser, getToken } from "/ui/js/api.js";
+    import { routeForRole } from "/ui/js/auth.js";
+    const user = getStoredUser();
+    if (getToken() && user?.role) {
+      window.location.replace(routeForRole(user.role));
+    } else {
+      window.location.replace("/ui/login.html");
+    }
+  </script>
+</body>
+</html>

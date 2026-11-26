@@ -27,6 +27,30 @@ from app.schemas.auth_schema import (
     LogoutResponse,
 )
 from app.schemas.role_schema import RolePermissionUpdate, RolePermissionResponse
+from app.schemas.audit_schema import AuditActor, AuditLogResponse, AuditStatus
+from app.schemas.notification_schema import (
+    NotificationType,
+    NotificationResponse,
+    InventoryAlertScanRequest,
+    InventoryAlertScanResponse,
+)
+from app.schemas.workflow_schema import (
+    ComponentSeparationRequest,
+    ComponentSeparationResponse,
+    RequestDecisionPayload,
+    AllocationRequestPayload,
+    AllocationResponse,
+)
+from app.schemas.blood_camp_schema import (
+    CampStatus,
+    BloodCampCreate,
+    BloodCampUpdate,
+    BloodCampResponse,
+)
+from app.schemas.analytics_schema import (
+    DashboardAnalyticsResponse,
+    ChangeStreamStatusResponse,
+)
 
 __all__ = [
     "MongoBaseModel",
@@ -39,6 +63,24 @@ __all__ = [
     "LogoutResponse",
     "RolePermissionUpdate",
     "RolePermissionResponse",
+    "AuditActor",
+    "AuditLogResponse",
+    "AuditStatus",
+    "NotificationType",
+    "NotificationResponse",
+    "InventoryAlertScanRequest",
+    "InventoryAlertScanResponse",
+    "ComponentSeparationRequest",
+    "ComponentSeparationResponse",
+    "RequestDecisionPayload",
+    "AllocationRequestPayload",
+    "AllocationResponse",
+    "CampStatus",
+    "BloodCampCreate",
+    "BloodCampUpdate",
+    "BloodCampResponse",
+    "DashboardAnalyticsResponse",
+    "ChangeStreamStatusResponse",
     "UserCreate",
     "UserUpdate",
     "UserResponse",

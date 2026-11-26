@@ -10,6 +10,10 @@ from app.routers.patient_router import router as patient_router
 from app.routers.donation_router import router as donation_router
 from app.routers.blood_unit_router import router as blood_unit_router
 from app.routers.blood_request_router import router as blood_request_router
+from app.routers.audit_router import router as audit_router
+from app.routers.notification_router import router as notification_router
+from app.routers.blood_camp_router import router as blood_camp_router
+from app.routers.analytics_router import router as analytics_router
 
 __all__ = [
     "auth_router",
@@ -21,4 +25,8 @@ __all__ = [
     "donation_router",
     "blood_unit_router",
     "blood_request_router",
+    "audit_router",
+    "notification_router",
+    "blood_camp_router",
+    "analytics_router",
 ]

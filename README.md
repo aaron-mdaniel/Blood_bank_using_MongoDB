@@ -6,6 +6,7 @@ An enterprise-grade academic platform demonstrating advanced NoSQL document mode
 
 ## Technology Stack
 
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript (5 Role-Based Dashboards)
 - **Backend**: Python 3.13, FastAPI, Pydantic v2, PyMongo
 - **Database**: MongoDB (Local or Atlas) + MongoDB Compass
 - **Security**: Argon2id password hashing, AES-256-GCM field-level encryption, JWT Bearer tokens
@@ -27,13 +28,14 @@ secure-blood-bank/
 │   │   ├── routers/                # FastAPI REST routers (Auth, Roles, Domain APIs)
 │   │   ├── schemas/                # Pydantic v2 request/response schemas
 │   │   ├── security/               # Argon2id, JWT, AES-256-GCM, RBAC & ABAC
-│   │   ├── services/               # AuthService, RBACService business logic
-│   │   └── main.py                 # FastAPI application factory & health endpoints
+│   │   ├── services/               # Auth, RBAC, Audit, Notification, Compatibility & Workflows
+│   │   └── main.py                 # FastAPI app, lifespan & 403 audit handler
 │   ├── deploy/
 │   │   └── nginx-tls.conf          # Production HTTPS/TLS reverse proxy config
 │   ├── scripts/
 │   │   ├── create_indexes.py       # MongoDB compound, unique, 2dsphere & TTL index script
-│   │   └── seed_roles.py           # Seeds default 5 RBAC roles in roles_permissions
+│   │   ├── seed_roles.py           # Seeds default 5 RBAC roles in roles_permissions
+│   │   └── seed_demo.py            # Idempotent academic demo dataset across 11 collections
 │   ├── tests/
 │   │   ├── conftest.py             # Pytest fixtures, mock DB & role auth header factory
 │   │   ├── test_database.py        # Phase 1 verification tests
@@ -42,11 +44,32 @@ secure-blood-bank/
 │   │   ├── test_auth.py            # Phase 3 authentication tests
 │   │   ├── test_rbac.py            # Phase 4 RBAC authorization tests
 │   │   ├── test_abac.py            # Phase 5 resource-level ABAC tests
-│   │   └── test_encryption.py      # Phase 6 AES-256-GCM encryption tests
+│   │   ├── test_encryption.py      # Phase 6 AES-256-GCM encryption tests
+│   │   ├── test_audit.py           # Phase 7 centralized audit logging tests
+│   │   ├── test_workflows.py       # Phase 8 workflows & atomic allocation tests
+│   │   ├── test_phase9.py          # Phase 9 aggregations, blood_camps & UI tests
+│   │   └── test_e2e_and_performance.py # Phase 10 E2E, concurrency & perf benchmarks
 │   ├── .env.example                # Configuration template
 │   ├── .env                        # Local configuration
 │   ├── requirements.txt            # Python dependencies
 │   └── run.py                      # Development server runner
+├── documentation/                  # Architecture, DB Schema, Security, API & Postman docs
+│   ├── architecture.md
+│   ├── database-schema.md
+│   ├── security-design.md
+│   ├── api-documentation.md
+│   └── postman_collection.json
+├── frontend/                       # Multi-role HTML5/CSS3/JS Web Interface (/ui)
+│   ├── index.html
+│   ├── login.html
+│   ├── register.html
+│   ├── admin/index.html
+│   ├── bloodbank/index.html
+│   ├── hospital/index.html
+│   ├── doctor/index.html
+│   ├── donor/index.html
+│   ├── css/styles.css
+│   └── js/
 ├── prompt/                         # Academic specifications & requirements
 ├── .gitignore
 └── README.md
@@ -84,10 +107,11 @@ cp backend/.env.example backend/.env
 ```
 Ensure `MONGODB_URL` points to your active MongoDB instance (e.g. `mongodb://localhost:27017` or MongoDB Atlas URI).
 
-### 3. Initialize MongoDB Indexes & Seed RBAC Roles
+### 3. Initialize MongoDB Indexes, RBAC Roles & Optional Demo Data
 ```bash
 python backend/scripts/create_indexes.py
 python backend/scripts/seed_roles.py
+python backend/scripts/seed_demo.py   # Optional: seeds 5 demo role accounts & sample records
 ```
 
 ### 4. Run the Development Server
@@ -98,7 +122,8 @@ Or with Uvicorn directly:
 ```bash
 uvicorn app.main:app --app-dir backend --reload --port 8000
 ```
-Interactive API documentation will be available at:
+Interactive web interface & API documentation will be available at:
+- **Web Interface (Login & Role Dashboards)**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/) (or [http://127.0.0.1:8000/ui/login.html](http://127.0.0.1:8000/ui/login.html))
 - **Swagger UI**: [http://127.0.0.1:8000/api/docs](http://127.0.0.1:8000/api/docs)
 - **ReDoc**: [http://127.0.0.1:8000/api/redoc](http://127.0.0.1:8000/api/redoc)
 
@@ -106,3 +131,23 @@ Interactive API documentation will be available at:
 ```bash
 python -m pytest backend/tests -v
 ```
+
+---
+
+## Documentation & Demo Reference
+
+- [Application Architecture](documentation/architecture.md)
+- [Database Schema & Indexes](documentation/database-schema.md)
+- [Security Design](documentation/security-design.md)
+- [REST API Reference](documentation/api-documentation.md)
+- [Postman Collection](documentation/postman_collection.json)
+
+### Optional Demo Accounts (`python backend/scripts/seed_demo.py`)
+
+| Role | Username | Password | Scope |
+| :--- | :--- | :--- | :--- |
+| `ADMIN` | `admin_demo` | `AdminDemo2026!` | Global |
+| `BLOOD_BANK_STAFF` | `staff_demo` | `StaffDemo2026!` | `bb_central` |
+| `HOSPITAL_STAFF` | `hospital_demo` | `HospitalDemo2026!` | `hosp_city_01` |
+| `DOCTOR` | `doctor_demo` | `DoctorDemo2026!` | `hosp_city_01` |
+| `DONOR` | `donor_demo` | `DonorDemo2026!` | Self |

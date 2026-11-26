@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In | Secure Blood Bank</title>
+  <link rel="stylesheet" href="/ui/css/styles.css" />
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <div class="brand-header">
+      <div class="brand-drop">B+</div>
+      <div>
+        <div class="brand-title">Secure Blood Bank System</div>
+        <div class="brand-subtitle">MongoDB · FastAPI · Argon2id · AES-256-GCM</div>
+      </div>
+    </div>
+
+    <h2 style="font-size:20px;margin-bottom:4px;">Sign In</h2>
+    <p class="text-muted" style="margin-bottom:16px;">Access your role-based blood bank workspace.</p>
+
+    <div id="auth-alert" class="hidden"></div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input id="username" name="username" required autocomplete="username" placeholder="Enter your username" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required autocomplete="current-password" placeholder="Enter your password" />
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:6px;">
+        Sign In
+      </button>
+    </form>
+
+    <div class="mt-4" style="display:flex;justify-content:space-between;font-size:13px;">
+      <a href="/ui/register.html" style="color:var(--primary);font-weight:600;text-decoration:none;">Create an account</a>
+      <a href="/api/docs" style="color:var(--muted);text-decoration:none;">API Docs</a>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initLoginPage } from "/ui/js/auth.js";
+    initLoginPage();
+  </script>
+</body>
+</html>

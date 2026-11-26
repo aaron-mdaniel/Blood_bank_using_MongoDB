@@ -16,9 +16,11 @@ from app.security.encryption import (
     encrypt_fields,
 )
 from app.security.hashing import hash_password
+from app.services.audit_service import AuditService
 
 router = APIRouter(prefix="/users", tags=["Users"])
 user_repo = UserRepository()
+audit_service = AuditService()
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -52,6 +54,13 @@ async def create_user(
 
     try:
         created = user_repo.create(user_dict)
+        audit_service.log_event(
+            action="USER_CREATED",
+            resource_type="users",
+            resource_id=created["_id"],
+            actor=current_user,
+            metadata={"username": created["username"], "role": created["role"], "source": "admin_api"},
+        )
         return decrypt_fields(created, USER_ENCRYPTED_FIELDS, context="users")
     except DuplicateKeyError:
         raise HTTPException(
@@ -98,9 +107,27 @@ async def update_user(
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields provided to update.")
 
-    updated = user_repo.update(user_id, update_data)
-    if not updated:
+    existing = user_repo.get_by_id(user_id)
+    if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+    updated = user_repo.update(user_id, update_data)
+    if "role" in update_data and existing.get("role") != updated.get("role"):
+        audit_service.log_event(
+            action="USER_ROLE_CHANGED",
+            resource_type="users",
+            resource_id=user_id,
+            actor=current_user,
+            metadata={"old_role": existing.get("role"), "new_role": updated.get("role")},
+        )
+    else:
+        audit_service.log_event(
+            action="USER_UPDATED",
+            resource_type="users",
+            resource_id=user_id,
+            actor=current_user,
+            metadata={"updated_fields": sorted(update_data.keys())},
+        )
     return decrypt_fields(updated, USER_ENCRYPTED_FIELDS, context="users")
 
 
@@ -113,4 +140,10 @@ async def delete_user(
     deleted = user_repo.delete(user_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    audit_service.log_event(
+        action="USER_DELETED",
+        resource_type="users",
+        resource_id=user_id,
+        actor=current_user,
+    )
     return None

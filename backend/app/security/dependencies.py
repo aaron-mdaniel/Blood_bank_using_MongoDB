@@ -3,7 +3,7 @@ FastAPI Security Dependencies: Bearer token extraction, user authentication,
 active status checks, and Role-Based Access Control (RBAC) guards.
 """
 from typing import Any, Callable, Dict, Tuple, Union
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 
@@ -58,6 +58,7 @@ async def get_current_token_and_payload(
 
 
 async def get_current_user(
+    request: Request,
     token_and_payload: Tuple[str, Dict[str, Any]] = Depends(get_current_token_and_payload),
 ) -> Dict[str, Any]:
     """
@@ -80,6 +81,9 @@ async def get_current_user(
             detail="User account no longer exists.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    if request is not None:
+        request.state.current_user = user
 
     if not user.get("is_active", True):
         raise HTTPException(

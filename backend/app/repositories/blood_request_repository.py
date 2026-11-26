@@ -52,7 +52,10 @@ class BloodRequestRepository(BaseRepository):
         return [self.serialize_doc(d) for d in cursor]
 
     def attach_allocated_units(
-        self, request_id: Union[str, ObjectId], unit_ids: List[str]
+        self,
+        request_id: Union[str, ObjectId],
+        unit_ids: List[str],
+        new_status: str = "ALLOCATED",
     ) -> Optional[Dict[str, Any]]:
         oid = self.to_object_id(request_id)
         now = datetime.now(timezone.utc)
@@ -61,7 +64,7 @@ class BloodRequestRepository(BaseRepository):
             {
                 "$set": {
                     "allocated_units": unit_ids,
-                    "status": "ALLOCATED",
+                    "status": new_status,
                     "updated_at": now,
                 }
             },

@@ -80,3 +80,36 @@ class BloodUnitRepository(BaseRepository):
             return_document=ReturnDocument.AFTER,
         )
         return self.serialize_doc(updated_doc)
+
+    def find_expiring_units(
+        self,
+        within_days: int = 7,
+        blood_bank_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Finds AVAILABLE blood units expiring within `within_days` from now."""
+        from datetime import timedelta
+        now = datetime.now(timezone.utc)
+        cutoff = now + timedelta(days=within_days)
+        query: Dict[str, Any] = {
+            "status": "AVAILABLE",
+            "expiry_date": {"$gt": now, "$lte": cutoff},
+        }
+        if blood_bank_id:
+            query["blood_bank_id"] = str(blood_bank_id)
+        cursor = self.collection.find(query).sort([("expiry_date", 1)])
+        return [self.serialize_doc(doc) for doc in cursor]
+
+    def mark_expired_units(self, blood_bank_id: Optional[str] = None) -> int:
+        """Transitions past-expiry AVAILABLE units to EXPIRED and returns modified count."""
+        now = datetime.now(timezone.utc)
+        query: Dict[str, Any] = {
+            "status": "AVAILABLE",
+            "expiry_date": {"$lte": now},
+        }
+        if blood_bank_id:
+            query["blood_bank_id"] = str(blood_bank_id)
+        result = self.collection.update_many(
+            query,
+            {"$set": {"status": "EXPIRED", "updated_at": now}, "$inc": {"version": 1}},
+        )
+        return result.modified_count

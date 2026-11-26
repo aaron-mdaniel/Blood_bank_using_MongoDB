@@ -18,6 +18,7 @@ from app.schemas.auth_schema import (
     UserSummary,
     LogoutResponse,
 )
+from app.schemas.audit_schema import AuditStatus
 from app.security.encryption import (
     USER_ENCRYPTED_FIELDS,
     decrypt_fields,
@@ -25,14 +26,16 @@ from app.security.encryption import (
 )
 from app.security.hashing import hash_password, verify_password
 from app.security.jwt_handler import create_access_token, token_blacklist
+from app.services.audit_service import AuditService
 
 
 class AuthService:
     """
     Orchestrates authentication, credential verification, and account security.
     """
-    def __init__(self, user_repo: UserRepository = None):
+    def __init__(self, user_repo: UserRepository = None, audit_service: AuditService = None):
         self.user_repo = user_repo or UserRepository()
+        self.audit_service = audit_service or AuditService()
 
     @staticmethod
     def compute_email_hash(email: str) -> str:
@@ -87,6 +90,14 @@ class AuthService:
 
         try:
             created = self.user_repo.create(user_doc)
+            self.audit_service.log_event(
+                action="USER_CREATED",
+                resource_type="users",
+                resource_id=created["_id"],
+                status=AuditStatus.SUCCESS.value,
+                actor=created,
+                metadata={"username": created["username"], "role": created["role"], "source": "self_register"},
+            )
             return decrypt_fields(created, USER_ENCRYPTED_FIELDS, context="users")
         except DuplicateKeyError:
             raise HTTPException(
@@ -104,6 +115,12 @@ class AuthService:
 
         # Constant-time mitigation against user enumeration
         if not user:
+            self.audit_service.log_event(
+                action="LOGIN_FAILED",
+                resource_type="auth",
+                status=AuditStatus.FAILURE.value,
+                metadata={"username": payload.username, "reason": "unknown_user"},
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid username or password.",
@@ -112,6 +129,14 @@ class AuthService:
 
         # Check if account is deactivated
         if not user.get("is_active", True):
+            self.audit_service.log_event(
+                action="LOGIN_FAILED",
+                resource_type="auth",
+                resource_id=str(user["_id"]),
+                status=AuditStatus.FAILURE.value,
+                actor=user,
+                metadata={"reason": "account_deactivated"},
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account is deactivated. Contact system administrator.",
@@ -125,6 +150,14 @@ class AuthService:
             now = datetime.now(timezone.utc)
             if lockout_until > now:
                 remaining_seconds = int((lockout_until - now).total_seconds())
+                self.audit_service.log_event(
+                    action="LOGIN_FAILED",
+                    resource_type="auth",
+                    resource_id=str(user["_id"]),
+                    status=AuditStatus.FAILURE.value,
+                    actor=user,
+                    metadata={"reason": "account_locked", "remaining_seconds": remaining_seconds},
+                )
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=(
@@ -137,7 +170,16 @@ class AuthService:
         password_valid = verify_password(payload.password, user.get("password_hash", ""))
         if not password_valid:
             # Increment failed attempts and trigger lockout if >= 5
-            self.user_repo.increment_failed_attempts(user["_id"], max_attempts=5)
+            updated_user = self.user_repo.increment_failed_attempts(user["_id"], max_attempts=5)
+            attempts = updated_user.get("failed_login_attempts") if updated_user else None
+            self.audit_service.log_event(
+                action="LOGIN_FAILED",
+                resource_type="auth",
+                resource_id=str(user["_id"]),
+                status=AuditStatus.FAILURE.value,
+                actor=user,
+                metadata={"reason": "invalid_password", "failed_attempts": attempts},
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid username or password.",
@@ -158,6 +200,15 @@ class AuthService:
         }
         access_token = create_access_token(token_claims)
         expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+
+        self.audit_service.log_event(
+            action="LOGIN_SUCCESS",
+            resource_type="auth",
+            resource_id=str(user["_id"]),
+            status=AuditStatus.SUCCESS.value,
+            actor=user,
+            metadata={"username": user["username"]},
+        )
 
         user_summary = UserSummary(
             _id=str(user["_id"]),
@@ -185,5 +236,14 @@ class AuthService:
         if jti and exp_ts:
             exp_datetime = datetime.fromtimestamp(exp_ts, tz=timezone.utc)
             token_blacklist.revoke(jti, exp_datetime)
+
+        self.audit_service.log_event(
+            action="LOGOUT",
+            resource_type="auth",
+            resource_id=payload.get("sub"),
+            status=AuditStatus.SUCCESS.value,
+            actor=payload,
+            metadata={"jti": jti},
+        )
 
         return LogoutResponse(message="Successfully logged out.", status="success")

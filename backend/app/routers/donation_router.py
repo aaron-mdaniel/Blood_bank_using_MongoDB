@@ -9,12 +9,15 @@ from app.models.permissions import Permission
 from app.repositories.donation_repository import DonationRepository
 from app.repositories.donor_repository import DonorRepository
 from app.schemas.donation_schema import DonationCreate, DonationUpdate, DonationResponse
+from app.schemas.workflow_schema import ComponentSeparationRequest, ComponentSeparationResponse
 from app.security import abac
 from app.security.dependencies import require_permissions
+from app.services.workflow_service import WorkflowService
 
 router = APIRouter(prefix="/donations", tags=["Donations"])
 donation_repo = DonationRepository()
 donor_repo = DonorRepository()
+workflow_service = WorkflowService(donor_repo=donor_repo, donation_repo=donation_repo)
 
 
 @router.post("", response_model=DonationResponse, status_code=status.HTTP_201_CREATED)
@@ -22,25 +25,30 @@ async def record_donation(
     payload: DonationCreate,
     current_user: Dict[str, Any] = Depends(require_permissions(Permission.DONATIONS_WRITE)),
 ):
-    """Logs a new blood donation event."""
-    abac.authorize_donation_create(current_user, payload.blood_bank_id)
-    if donation_repo.get_by_code(payload.donation_code):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Donation code '{payload.donation_code}' has already been processed."
-        )
-
-    donation_dict = payload.model_dump()
-    donation_dict["components_separated"] = False
-
+    """Logs a new blood donation event, updating donor eligibility dates when linked."""
     try:
-        created = donation_repo.create(donation_dict)
-        return created
+        return workflow_service.record_donation(payload, current_user)
     except DuplicateKeyError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Donation code already exists."
         )
+
+
+@router.post(
+    "/{donation_id}/separate-components",
+    response_model=ComponentSeparationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def separate_components(
+    donation_id: str,
+    payload: ComponentSeparationRequest = ComponentSeparationRequest(),
+    current_user: Dict[str, Any] = Depends(
+        require_permissions(Permission.DONATIONS_WRITE, Permission.BLOOD_UNITS_WRITE)
+    ),
+):
+    """Separates a screened donation into individual component BloodUnit documents."""
+    return workflow_service.separate_donation_components(donation_id, payload, current_user)
 
 
 @router.get("", response_model=List[DonationResponse])

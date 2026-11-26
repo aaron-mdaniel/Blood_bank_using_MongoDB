@@ -12,9 +12,11 @@ from app.repositories.blood_unit_repository import BloodUnitRepository
 from app.schemas.blood_unit_schema import BloodUnitCreate, BloodUnitUpdate, BloodUnitResponse
 from app.security import abac
 from app.security.dependencies import require_permissions
+from app.services.audit_service import AuditService
 
 router = APIRouter(prefix="/blood-units", tags=["Blood Units"])
 unit_repo = BloodUnitRepository()
+audit_service = AuditService()
 
 
 @router.post("", response_model=BloodUnitResponse, status_code=status.HTTP_201_CREATED)
@@ -37,6 +39,19 @@ async def create_blood_unit(
 
     try:
         created = unit_repo.create(unit_dict)
+        audit_service.log_event(
+            action="BLOOD_UNIT_CREATED",
+            resource_type="blood_units",
+            resource_id=created["_id"],
+            actor=current_user,
+            metadata={
+                "unit_id": created["unit_id"],
+                "blood_group": created["blood_group"],
+                "rh_factor": created["rh_factor"],
+                "component_type": created["component_type"],
+                "blood_bank_id": created["blood_bank_id"],
+            },
+        )
         return created
     except DuplicateKeyError:
         raise HTTPException(
@@ -103,4 +118,22 @@ async def update_blood_unit(
     abac.authorize_blood_unit_access(current_user, target, for_write=True)
 
     updated = unit_repo.update(target["_id"], update_data)
+    new_status = updated.get("status")
+    action_name = (
+        "BLOOD_UNIT_ALLOCATED"
+        if new_status in (BloodUnitStatus.ALLOCATED.value, BloodUnitStatus.RESERVED.value)
+        else "BLOOD_UNIT_UPDATED"
+    )
+    audit_service.log_event(
+        action=action_name,
+        resource_type="blood_units",
+        resource_id=target["_id"],
+        actor=current_user,
+        metadata={
+            "unit_id": target.get("unit_id"),
+            "previous_status": target.get("status"),
+            "new_status": new_status,
+            "reserved_for_request_id": updated.get("reserved_for_request_id"),
+        },
+    )
     return updated
