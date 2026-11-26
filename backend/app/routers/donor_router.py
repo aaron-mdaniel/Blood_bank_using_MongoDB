@@ -10,6 +10,11 @@ from app.repositories.donor_repository import DonorRepository
 from app.schemas.donor_schema import DonorCreate, DonorUpdate, DonorResponse
 from app.security import abac
 from app.security.dependencies import require_permissions
+from app.security.encryption import (
+    DONOR_ENCRYPTED_FIELDS,
+    decrypt_fields,
+    encrypt_fields,
+)
 
 router = APIRouter(prefix="/donors", tags=["Donors"])
 donor_repo = DonorRepository()
@@ -28,18 +33,11 @@ async def create_donor(
             detail=f"Donor card number '{payload.donor_card_number}' already exists."
         )
 
-    donor_dict = payload.model_dump()
-    # In Phase 2, placeholder encrypted fields; Phase 6 introduces full AES-256-GCM cipher service
-    donor_dict["contact_phone_encrypted"] = f"enc_{donor_dict.pop('contact_phone')}"
-    donor_dict["address_encrypted"] = f"enc_{donor_dict.pop('address')}"
-    if donor_dict.get("emergency_contact"):
-        donor_dict["emergency_contact_encrypted"] = f"enc_{donor_dict.pop('emergency_contact')}"
-    if donor_dict.get("medical_screening_notes"):
-        donor_dict["medical_screening_notes_encrypted"] = f"enc_{donor_dict.pop('medical_screening_notes')}"
+    donor_dict = encrypt_fields(payload.model_dump(), DONOR_ENCRYPTED_FIELDS, context="donors")
 
     try:
         created = donor_repo.create(donor_dict)
-        return created
+        return decrypt_fields(created, DONOR_ENCRYPTED_FIELDS, context="donors")
     except DuplicateKeyError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -65,7 +63,8 @@ async def list_donors(
     if eligibility_status:
         query["eligibility_status"] = eligibility_status
     abac.scope_donor_query(current_user, query)
-    return donor_repo.find_many(query, skip=skip, limit=limit)
+    docs = donor_repo.find_many(query, skip=skip, limit=limit)
+    return [decrypt_fields(doc, DONOR_ENCRYPTED_FIELDS, context="donors") for doc in docs]
 
 
 @router.get("/{donor_id}", response_model=DonorResponse)
@@ -78,7 +77,7 @@ async def get_donor(
     if not donor:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Donor not found.")
     abac.authorize_donor_access(current_user, donor)
-    return donor
+    return decrypt_fields(donor, DONOR_ENCRYPTED_FIELDS, context="donors")
 
 
 @router.put("/{donor_id}", response_model=DonorResponse)
@@ -97,8 +96,9 @@ async def update_donor(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Donor not found.")
     abac.authorize_donor_update(current_user, existing, update_data)
 
-    updated = donor_repo.update(donor_id, update_data)
-    return updated
+    encrypted_update = encrypt_fields(update_data, DONOR_ENCRYPTED_FIELDS, context="donors")
+    updated = donor_repo.update(donor_id, encrypted_update)
+    return decrypt_fields(updated, DONOR_ENCRYPTED_FIELDS, context="donors")
 
 
 @router.delete("/{donor_id}", status_code=status.HTTP_204_NO_CONTENT)

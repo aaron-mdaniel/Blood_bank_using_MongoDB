@@ -10,6 +10,11 @@ from app.models.permissions import Permission
 from app.repositories.user_repository import UserRepository
 from app.schemas.user_schema import UserCreate, UserUpdate, UserResponse
 from app.security.dependencies import require_permissions
+from app.security.encryption import (
+    USER_ENCRYPTED_FIELDS,
+    decrypt_fields,
+    encrypt_fields,
+)
 from app.security.hashing import hash_password
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -40,14 +45,14 @@ async def create_user(
     raw_password = user_dict.pop("password")
     user_dict["password_hash"] = hash_password(raw_password)
     user_dict["email_hash"] = email_hash
-    user_dict["email_encrypted"] = f"enc_{payload.email}"
     user_dict["is_active"] = True
     user_dict["failed_login_attempts"] = 0
     user_dict["lockout_until"] = None
+    user_dict = encrypt_fields(user_dict, USER_ENCRYPTED_FIELDS, context="users")
 
     try:
         created = user_repo.create(user_dict)
-        return created
+        return decrypt_fields(created, USER_ENCRYPTED_FIELDS, context="users")
     except DuplicateKeyError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -66,7 +71,8 @@ async def list_users(
     query = {}
     if role:
         query["role"] = role
-    return user_repo.find_many(query, skip=skip, limit=limit)
+    docs = user_repo.find_many(query, skip=skip, limit=limit)
+    return [decrypt_fields(doc, USER_ENCRYPTED_FIELDS, context="users") for doc in docs]
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -78,7 +84,7 @@ async def get_user(
     user = user_repo.get_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    return user
+    return decrypt_fields(user, USER_ENCRYPTED_FIELDS, context="users")
 
 
 @router.put("/{user_id}", response_model=UserResponse)
@@ -95,7 +101,7 @@ async def update_user(
     updated = user_repo.update(user_id, update_data)
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    return updated
+    return decrypt_fields(updated, USER_ENCRYPTED_FIELDS, context="users")
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

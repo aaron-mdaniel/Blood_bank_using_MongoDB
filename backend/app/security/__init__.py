@@ -15,6 +15,12 @@ from app.security.dependencies import (
     require_permissions,
 )
 from app.security import abac
+from app.security.encryption import (
+    FieldCipher,
+    field_cipher,
+    encrypt_fields,
+    decrypt_fields,
+)
 
 __all__ = [
     "hash_password",
@@ -29,4 +35,8 @@ __all__ = [
     "require_roles",
     "require_permissions",
     "abac",
+    "FieldCipher",
+    "field_cipher",
+    "encrypt_fields",
+    "decrypt_fields",
 ]

@@ -10,6 +10,11 @@ from app.repositories.patient_repository import PatientRepository
 from app.schemas.patient_schema import PatientCreate, PatientUpdate, PatientResponse
 from app.security import abac
 from app.security.dependencies import require_permissions
+from app.security.encryption import (
+    PATIENT_ENCRYPTED_FIELDS,
+    decrypt_fields,
+    encrypt_fields,
+)
 
 router = APIRouter(prefix="/patients", tags=["Patients"])
 patient_repo = PatientRepository()
@@ -28,13 +33,11 @@ async def create_patient(
             detail=f"Patient MRN '{payload.mrn}' already exists for this hospital."
         )
 
-    patient_dict = payload.model_dump()
-    if patient_dict.get("medical_notes"):
-        patient_dict["medical_notes_encrypted"] = f"enc_{patient_dict.pop('medical_notes')}"
+    patient_dict = encrypt_fields(payload.model_dump(), PATIENT_ENCRYPTED_FIELDS, context="patients")
 
     try:
         created = patient_repo.create(patient_dict)
-        return created
+        return decrypt_fields(created, PATIENT_ENCRYPTED_FIELDS, context="patients")
     except DuplicateKeyError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -57,7 +60,8 @@ async def list_patients(
     if doctor_id:
         query["attending_doctor_id"] = doctor_id
     abac.scope_patient_query(current_user, query)
-    return patient_repo.find_many(query, skip=skip, limit=limit)
+    docs = patient_repo.find_many(query, skip=skip, limit=limit)
+    return [decrypt_fields(doc, PATIENT_ENCRYPTED_FIELDS, context="patients") for doc in docs]
 
 
 @router.get("/{patient_id}", response_model=PatientResponse)
@@ -70,7 +74,7 @@ async def get_patient(
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
     abac.authorize_patient_access(current_user, patient)
-    return patient
+    return decrypt_fields(patient, PATIENT_ENCRYPTED_FIELDS, context="patients")
 
 
 @router.put("/{patient_id}", response_model=PatientResponse)
@@ -89,5 +93,6 @@ async def update_patient(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
     abac.authorize_patient_access(current_user, existing)
 
-    updated = patient_repo.update(patient_id, update_data)
-    return updated
+    encrypted_update = encrypt_fields(update_data, PATIENT_ENCRYPTED_FIELDS, context="patients")
+    updated = patient_repo.update(patient_id, encrypted_update)
+    return decrypt_fields(updated, PATIENT_ENCRYPTED_FIELDS, context="patients")

@@ -4,7 +4,7 @@ Loads configuration from environment variables and .env file.
 """
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -53,6 +53,11 @@ class Settings(BaseSettings):
     ARGON2_TIME_COST: int = Field(default=3, description="Argon2id time cost (iterations)")
     ARGON2_MEMORY_COST: int = Field(default=65536, description="Argon2id memory cost in KiB (64 MiB)")
     ARGON2_PARALLELISM: int = Field(default=4, description="Argon2id parallelism (threads)")
+
+    # HTTPS / TLS Deployment Configuration
+    SSL_CERTFILE: Optional[str] = Field(default=None, description="Path to TLS certificate file (.pem/.crt)")
+    SSL_KEYFILE: Optional[str] = Field(default=None, description="Path to TLS private key file (.pem/.key)")
+    FORCE_HTTPS_REDIRECT: bool = Field(default=False, description="Redirect HTTP traffic to HTTPS when enabled")
 
     # CORS Configuration
     CORS_ORIGINS: Union[List[str], str] = Field(

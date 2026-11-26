@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from typing import Dict, Any
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config.settings import get_settings
@@ -79,6 +80,9 @@ def create_application() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    if settings.FORCE_HTTPS_REDIRECT:
+        app.add_middleware(HTTPSRedirectMiddleware)
 
     @app.get("/", tags=["Root"])
     async def root():

@@ -47,6 +47,10 @@ class DonorResponse(MongoBaseModel):
     blood_group: BloodGroup
     rh_factor: RhFactor
     eligibility_status: DonorEligibility
+    contact_phone: Optional[str] = None
+    address: Optional[str] = None
+    emergency_contact: Optional[str] = None
+    medical_screening_notes: Optional[str] = None
     contact_phone_encrypted: Optional[str] = None
     address_encrypted: Optional[str] = None
     emergency_contact_encrypted: Optional[str] = None

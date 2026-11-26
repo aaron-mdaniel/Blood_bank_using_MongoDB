@@ -17,6 +17,7 @@ from app.security.dependencies import (
     get_current_user,
     get_current_token_and_payload,
 )
+from app.security.encryption import USER_ENCRYPTED_FIELDS, decrypt_fields
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 auth_service = AuthService()
@@ -79,4 +80,4 @@ async def get_me(
     """
     Returns the profile and role details of the currently authenticated session actor.
     """
-    return current_user
+    return decrypt_fields(current_user, USER_ENCRYPTED_FIELDS, context="users")

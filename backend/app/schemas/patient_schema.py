@@ -34,5 +34,6 @@ class PatientResponse(MongoBaseModel):
     blood_group: BloodGroup
     rh_factor: RhFactor
     clinical_indication: str
+    medical_notes: Optional[str] = None
     medical_notes_encrypted: Optional[str] = None
     created_at: datetime

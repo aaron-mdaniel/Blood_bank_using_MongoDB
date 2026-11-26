@@ -26,9 +26,11 @@ secure-blood-bank/
 │   │   ├── repositories/           # PyMongo data access layer (CRUD & atomic updates)
 │   │   ├── routers/                # FastAPI REST routers (Auth, Roles, Domain APIs)
 │   │   ├── schemas/                # Pydantic v2 request/response schemas
-│   │   ├── security/               # Argon2id hashing, JWT, RBAC & ABAC policies
+│   │   ├── security/               # Argon2id, JWT, AES-256-GCM, RBAC & ABAC
 │   │   ├── services/               # AuthService, RBACService business logic
 │   │   └── main.py                 # FastAPI application factory & health endpoints
+│   ├── deploy/
+│   │   └── nginx-tls.conf          # Production HTTPS/TLS reverse proxy config
 │   ├── scripts/
 │   │   ├── create_indexes.py       # MongoDB compound, unique, 2dsphere & TTL index script
 │   │   └── seed_roles.py           # Seeds default 5 RBAC roles in roles_permissions
@@ -39,7 +41,8 @@ secure-blood-bank/
 │   │   ├── test_crud_api.py        # Phase 2 CRUD API tests
 │   │   ├── test_auth.py            # Phase 3 authentication tests
 │   │   ├── test_rbac.py            # Phase 4 RBAC authorization tests
-│   │   └── test_abac.py            # Phase 5 resource-level ABAC tests
+│   │   ├── test_abac.py            # Phase 5 resource-level ABAC tests
+│   │   └── test_encryption.py      # Phase 6 AES-256-GCM encryption tests
 │   ├── .env.example                # Configuration template
 │   ├── .env                        # Local configuration
 │   ├── requirements.txt            # Python dependencies

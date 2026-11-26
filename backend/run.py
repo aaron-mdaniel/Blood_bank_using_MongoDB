@@ -15,13 +15,20 @@ from app.config.settings import get_settings
 
 if __name__ == "__main__":
     settings = get_settings()
-    print(f"Launching {settings.PROJECT_NAME} on http://127.0.0.1:8000...")
-    uvicorn.run(
-        "app.main:app",
-        app_dir=str(BACKEND_DIR),
-        host="127.0.0.1",
-        port=8000,
-        reload=settings.DEBUG,
-        reload_dirs=[str(BACKEND_DIR)],
-        log_level="info",
-    )
+    use_tls = bool(settings.SSL_CERTFILE and settings.SSL_KEYFILE)
+    scheme = "https" if use_tls else "http"
+    print(f"Launching {settings.PROJECT_NAME} on {scheme}://127.0.0.1:8000...")
+
+    run_kwargs = {
+        "app_dir": str(BACKEND_DIR),
+        "host": "127.0.0.1",
+        "port": 8000,
+        "reload": settings.DEBUG,
+        "reload_dirs": [str(BACKEND_DIR)],
+        "log_level": "info",
+    }
+    if use_tls:
+        run_kwargs["ssl_certfile"] = settings.SSL_CERTFILE
+        run_kwargs["ssl_keyfile"] = settings.SSL_KEYFILE
+
+    uvicorn.run("app.main:app", **run_kwargs)

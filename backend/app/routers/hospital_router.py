@@ -10,6 +10,11 @@ from app.models.permissions import Permission
 from app.repositories.hospital_repository import HospitalRepository
 from app.schemas.hospital_schema import HospitalCreate, HospitalUpdate, HospitalResponse
 from app.security.dependencies import require_permissions
+from app.security.encryption import (
+    HOSPITAL_ENCRYPTED_FIELDS,
+    decrypt_fields,
+    encrypt_fields,
+)
 
 router = APIRouter(prefix="/hospitals", tags=["Hospitals"])
 hospital_repo = HospitalRepository()
@@ -27,13 +32,11 @@ async def create_hospital(
             detail=f"License number '{payload.license_number}' is already registered."
         )
 
-    hosp_dict = payload.model_dump()
-    hosp_dict["address_encrypted"] = f"enc_{hosp_dict.pop('address')}"
-    hosp_dict["emergency_helpline_encrypted"] = f"enc_{hosp_dict.pop('emergency_helpline')}"
+    hosp_dict = encrypt_fields(payload.model_dump(), HOSPITAL_ENCRYPTED_FIELDS, context="hospitals")
 
     try:
         created = hospital_repo.create(hosp_dict)
-        return created
+        return decrypt_fields(created, HOSPITAL_ENCRYPTED_FIELDS, context="hospitals")
     except DuplicateKeyError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -51,7 +54,8 @@ async def find_nearby_hospitals(
 ):
     """Finds hospitals within proximity radius (km) using MongoDB geospatial index."""
     max_meters = int(radius_km * 1000)
-    return hospital_repo.find_nearby(longitude, latitude, max_distance_meters=max_meters, limit=limit)
+    docs = hospital_repo.find_nearby(longitude, latitude, max_distance_meters=max_meters, limit=limit)
+    return [decrypt_fields(doc, HOSPITAL_ENCRYPTED_FIELDS, context="hospitals") for doc in docs]
 
 
 @router.get("", response_model=List[HospitalResponse])
@@ -61,7 +65,8 @@ async def list_hospitals(
     current_user: Dict[str, Any] = Depends(require_permissions(Permission.HOSPITALS_READ)),
 ):
     """Retrieves paginated list of registered hospitals."""
-    return hospital_repo.find_many({}, skip=skip, limit=limit)
+    docs = hospital_repo.find_many({}, skip=skip, limit=limit)
+    return [decrypt_fields(doc, HOSPITAL_ENCRYPTED_FIELDS, context="hospitals") for doc in docs]
 
 
 @router.get("/{hospital_id}", response_model=HospitalResponse)
@@ -73,7 +78,7 @@ async def get_hospital(
     hosp = hospital_repo.get_by_id(hospital_id)
     if not hosp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hospital not found.")
-    return hosp
+    return decrypt_fields(hosp, HOSPITAL_ENCRYPTED_FIELDS, context="hospitals")
 
 
 @router.put("/{hospital_id}", response_model=HospitalResponse)
@@ -87,7 +92,8 @@ async def update_hospital(
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields provided to update.")
 
-    updated = hospital_repo.update(hospital_id, update_data)
+    encrypted_update = encrypt_fields(update_data, HOSPITAL_ENCRYPTED_FIELDS, context="hospitals")
+    updated = hospital_repo.update(hospital_id, encrypted_update)
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hospital not found.")
-    return updated
+    return decrypt_fields(updated, HOSPITAL_ENCRYPTED_FIELDS, context="hospitals")

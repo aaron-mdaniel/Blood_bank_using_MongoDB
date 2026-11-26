@@ -24,6 +24,7 @@ from app.config.database import db_manager, Collections
 from app.main import app
 from app.models.enums import UserRole
 from app.repositories.user_repository import UserRepository
+from app.security.encryption import USER_ENCRYPTED_FIELDS, encrypt_fields
 from app.security.hashing import hash_password
 from app.security.jwt_handler import create_access_token, token_blacklist
 
@@ -76,18 +77,23 @@ def auth_header_factory(mock_db):
         uname = username or f"test_{role_val.lower()}"
         existing = user_repo.get_by_username(uname)
         if not existing:
-            existing = user_repo.create({
-                "username": uname,
-                "email_hash": f"hash_{uname}@test.local",
-                "email_encrypted": f"enc_{uname}@test.local",
-                "password_hash": hash_password("TestPassword2026!"),
-                "role": role_val,
-                "is_active": True,
-                "failed_login_attempts": 0,
-                "lockout_until": None,
-                "hospital_id": hospital_id,
-                "blood_bank_id": blood_bank_id,
-            })
+            user_doc = encrypt_fields(
+                {
+                    "username": uname,
+                    "email_hash": f"hash_{uname}@test.local",
+                    "email": f"{uname}@test.local",
+                    "password_hash": hash_password("TestPassword2026!"),
+                    "role": role_val,
+                    "is_active": True,
+                    "failed_login_attempts": 0,
+                    "lockout_until": None,
+                    "hospital_id": hospital_id,
+                    "blood_bank_id": blood_bank_id,
+                },
+                USER_ENCRYPTED_FIELDS,
+                context="users",
+            )
+            existing = user_repo.create(user_doc)
         token = create_access_token({
             "sub": str(existing["_id"]),
             "username": existing["username"],

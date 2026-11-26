@@ -18,6 +18,11 @@ from app.schemas.auth_schema import (
     UserSummary,
     LogoutResponse,
 )
+from app.security.encryption import (
+    USER_ENCRYPTED_FIELDS,
+    decrypt_fields,
+    encrypt_fields,
+)
 from app.security.hashing import hash_password, verify_password
 from app.security.jwt_handler import create_access_token, token_blacklist
 
@@ -63,22 +68,26 @@ class AuthService:
         # Hash password using Argon2id
         argon2_hash = hash_password(payload.password)
 
-        user_doc = {
-            "username": payload.username,
-            "email_hash": email_hash,
-            "email_encrypted": f"enc_{payload.email}",  # Secured via AES-256-GCM in Phase 6
-            "password_hash": argon2_hash,
-            "role": payload.role.value if isinstance(payload.role, UserRole) else str(payload.role),
-            "is_active": True,
-            "failed_login_attempts": 0,
-            "lockout_until": None,
-            "hospital_id": payload.hospital_id,
-            "blood_bank_id": payload.blood_bank_id,
-        }
+        user_doc = encrypt_fields(
+            {
+                "username": payload.username,
+                "email_hash": email_hash,
+                "email": str(payload.email),
+                "password_hash": argon2_hash,
+                "role": payload.role.value if isinstance(payload.role, UserRole) else str(payload.role),
+                "is_active": True,
+                "failed_login_attempts": 0,
+                "lockout_until": None,
+                "hospital_id": payload.hospital_id,
+                "blood_bank_id": payload.blood_bank_id,
+            },
+            USER_ENCRYPTED_FIELDS,
+            context="users",
+        )
 
         try:
             created = self.user_repo.create(user_doc)
-            return created
+            return decrypt_fields(created, USER_ENCRYPTED_FIELDS, context="users")
         except DuplicateKeyError:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

@@ -48,6 +48,8 @@ class HospitalResponse(MongoBaseModel):
     name: str
     license_number: str
     location: GeoPoint
+    address: Optional[str] = None
+    emergency_helpline: Optional[str] = None
     address_encrypted: Optional[str] = None
     emergency_helpline_encrypted: Optional[str] = None
     verification_status: HospitalVerificationStatus

@@ -27,6 +27,7 @@ class UserUpdate(BaseModel):
 class UserResponse(MongoBaseModel):
     id: str = Field(..., alias="_id")
     username: str
+    email: Optional[str] = None
     email_encrypted: Optional[str] = None
     role: UserRole
     is_active: bool
